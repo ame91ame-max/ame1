@@ -1,0 +1,12 @@
+﻿{
+  "name": "شو أطبخ اليوم؟",
+  "short_name": "شو أطبخ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f0f8ff",
+  "theme_color": "#87cefa",
+  "icons": [
+    { "src": "icon.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,273 @@
+﻿<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>شو أطبخ؟ / What to cook?</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#87cefa">
+<style>
+body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: AliceBlue; margin:0; padding:0; display:flex; justify-content:center; align-items:center; min-height:100vh; }
+#app { width: 90%; max-width: 450px; background: #f0f8ff; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.2); }
+h1 { text-align:center; color: #333; }
+button { width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; font-weight:bold; border:none; border-radius:10px; cursor:pointer; }
+.lightblue { background-color: LightSkyBlue; color:#fff; }
+.lightgreen { background-color: LightGreen; }
+.lightyellow { background-color: LightYellow; color:#333; }
+.mistyrose { background-color: MistyRose; }
+.lightcyan { background-color: LightCyan; }
+.lavender { background-color: Lavender; }
+.lavenderblush { background-color: LavenderBlush; }
+.hidden { display:none; }
+label { display:block; margin-top:10px; font-weight:bold; }
+input, select, textarea { width: 100%; padding:8px; margin-top:5px; border-radius:5px; border:1px solid #aaa; font-family: inherit; }
+ul { list-style:none; padding:0; max-height:300px; overflow-y:auto; }
+li { padding:5px; border-bottom:1px solid #ccc; display:flex; justify-content:space-between; align-items:flex-start; white-space: pre-line; }
+.delBtn { background:red; color:white; border:none; border-radius:5px; cursor:pointer; padding:2px 6px; margin-left:5px; font-size:12px; }
+.editBtn { background:orange; color:white; border:none; border-radius:5px; cursor:pointer; padding:2px 6px; font-size:12px; }
+#suggestText { font-weight:bold; font-size:18px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+    <!-- اختيار اللغة -->
+    <div id="langSelect">
+        <h2>اختر اللغة / Choose Language</h2>
+        <button class="lightblue" id="btnAR">العربية</button>
+        <button class="lightblue" id="btnEN">English</button>
+    </div>
+
+    <!-- الواجهة الرئيسية -->
+    <div id="mainMenu" class="hidden">
+        <h1 id="appTitle">شو أطبخ؟</h1>
+        <button class="lightblue" id="btnSuggest">اقتراح طبخة</button>
+        <button class="lightblue" id="btnAdd">إضافة طبخة</button>
+        <button class="lightblue" id="btnShowAll">عرض الطبخات</button>
+        <button class="lightblue" id="btnFav">طبخاتي السابقة</button>
+        <button class="lightblue" id="btnChangeLang">تغيير اللغة / Change Language</button>
+        <button class="lightblue" id="btnHelp">عن التطبيق</button>
+        <button class="lightblue" id="btnExit">خروج</button>
+    </div>
+
+    <!-- إضافة طبخة -->
+    <div id="addRecipeForm" class="hidden lavender">
+        <h2 id="addTitle">إضافة طبخة</h2>
+        <label id="lblName">اسم الطبخة</label>
+        <input type="text" id="recipeName">
+        <label id="lblCat">الفئة</label>
+        <select id="recipeCategory">
+            <option>لحم</option>
+            <option>دجاج</option>
+            <option>سمك</option>
+            <option>خضار</option>
+            <option>معجنات</option>
+            <option>خبز</option>
+            <option>أرز</option>
+        </select>
+        <label id="lblDiff">الصعوبة</label>
+        <select id="recipeDifficulty">
+            <option>سهل</option>
+            <option>متوسط</option>
+            <option>صعب</option>
+        </select>
+        <label id="lblDetails">المكونات / Details</label>
+        <textarea id="recipeDetails" rows="3"></textarea>
+        <button class="lightgreen" id="saveRecipe">حفظ الطبخة</button>
+        <button class="lightyellow" id="cancelAdd">إلغاء</button>
+    </div>
+
+    <!-- عرض قائمة -->
+    <div id="recipeList" class="hidden lavenderblush">
+        <h2 id="listTitle">الطبخات</h2>
+        <ul id="listItems"></ul>
+        <button class="lightyellow" id="closeList">إغلاق</button>
+    </div>
+
+    <!-- اقتراح طبخة -->
+    <div id="suggestForm" class="hidden lightcyan">
+        <h2 id="suggestTitle">اقتراح</h2>
+        <p id="suggestText"></p>
+        <button class="lightgreen" id="cookIt">سأطبخها</button>
+        <button class="lightyellow" id="another">غيرها</button>
+        <button class="lightblue" id="backSuggest">رجوع</button>
+    </div>
+
+</div>
+
+<script>
+if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').then(()=>console.log('Service Worker Registered'));
+}
+
+let lang=null;
+const texts={ar:{appTitle:"شو أطبخ؟",addTitle:"إضافة طبخة",lblName:"اسم الطبخة",lblCat:"الفئة",lblDiff:"الصعوبة",
+lblDetails:"المكونات / التفاصيل",btnSuggest:"اقتراح طبخة",btnAdd:"إضافة طبخة",btnShowAll:"عرض الطبخات",
+btnFav:"طبخاتي السابقة",btnChangeLang:"تغيير اللغة / Change Language",btnHelp:"عن التطبيق",btnExit:"خروج",
+fillAll:"الرجاء تعبئة جميع الحقول",saved:"✅ تم الحفظ",addedFav:"✅ تمت إضافتها إلى طبخاتي",
+noRecipes:"لا توجد طبخات!",noFavs:"انتهت الاقتراحات، أضف طبخات جديدة!",listTitle:"الطبخات",
+favTitle:"طبخاتي السابقة",helpMsg:`مرحبًا بكم في تطبيق "شو أطبخ اليوم؟"\n\nيساعدك هذا التطبيق على اختيار وجباتك اليومية بسهولة دون حيرة.\n\nكل ما عليك فعله هو:\n1. إضافة الطبخات التي ترغب بها.\n2. سيقترح لك البرنامج طبخة عشوائية، مع ضمان عدم تكرار الطبخة إلا بعد مرور 15 اقتراح آخر.\n3. يمكنك تعديل أو حذف الطبخات في أي وقت.\n4. إمكانية مراجعة آخر 15 طبخة تم طبخها.\n5. كل هذه المزايا تعمل بدون الحاجة للاتصال بالإنترنت.\n6 استمتع بتجربة طهي سهلة وممتعة  \n7. كل ذلك ب 1 $ \n\n مع تحيات م.أنس ايبش \n\n!` },
+en:{appTitle:"What to cook?",addTitle:"Add Recipe",lblName:"Recipe Name",lblCat:"Category",lblDiff:"Difficulty",
+lblDetails:"Ingredients / Details",btnSuggest:"Suggest Recipe",btnAdd:"Add Recipe",btnShowAll:"Show Recipes",
+btnFav:"Already Cooked",btnChangeLang:"Change Language",btnHelp:"About App",btnExit:"Exit",
+fillAll:"Please fill all fields",saved:"✅ Saved",addedFav:"✅ Added to Already Cooked",
+noRecipes:"No recipes!",noFavs:"No saved recipes!",listTitle:"Recipes",
+favTitle:"Already Cooked",helpMsg:`Welcome to "What to cook today?"\n\nThis app helps you choose your daily meals easily.\n\nYou can:\n1. Add your recipes.\n2. Get a random suggestion, ensuring no repeat until 15 other suggestions.\n3. Edit or delete any recipe.\n4. Review last 15 cooked recipes.\n5. All features work offline.\n6 Enjoy an easy and fun cooking experience!.\n7 all for 1$.\n\n Greetings Eng.Anas Eibesh` }}
+const langSelect=document.getElementById("langSelect");
+const mainMenu=document.getElementById("mainMenu");
+const addForm=document.getElementById("addRecipeForm");
+const recipeList=document.getElementById("recipeList");
+const listItems=document.getElementById("listItems");
+const suggestForm=document.getElementById("suggestForm");
+const suggestText=document.getElementById("suggestText");
+
+let recipes=JSON.parse(localStorage.getItem("recipes")||"[]");
+let favorites=JSON.parse(localStorage.getItem("favorites")||"[]");
+let lastSuggestedId=null;
+
+function saveRecipes(){ localStorage.setItem("recipes",JSON.stringify(recipes)); }
+function saveFavorites(){ localStorage.setItem("favorites",JSON.stringify(favorites)); }
+
+function showMenu(){
+    mainMenu.classList.remove("hidden");
+    addForm.classList.add("hidden");
+    recipeList.classList.add("hidden");
+    suggestForm.classList.add("hidden");
+}
+
+function setLanguage(l){
+    lang=l;
+    document.body.style.direction=(l==="ar")?"rtl":"ltr";
+    langSelect.classList.add("hidden");
+    mainMenu.classList.remove("hidden");
+    document.getElementById("appTitle").innerText=texts[lang].appTitle;
+    document.getElementById("addTitle").innerText=texts[lang].addTitle;
+    document.getElementById("lblName").innerText=texts[lang].lblName;
+    document.getElementById("lblCat").innerText=texts[lang].lblCat;
+    document.getElementById("lblDiff").innerText=texts[lang].lblDiff;
+    document.getElementById("lblDetails").innerText=texts[lang].lblDetails;
+    document.getElementById("btnSuggest").innerText=texts[lang].btnSuggest;
+    document.getElementById("btnAdd").innerText=texts[lang].btnAdd;
+    document.getElementById("btnShowAll").innerText=texts[lang].btnShowAll;
+    document.getElementById("btnFav").innerText=texts[lang].btnFav;
+    document.getElementById("btnChangeLang").innerText=texts[lang].btnChangeLang;
+    document.getElementById("btnHelp").innerText=texts[lang].btnHelp;
+    document.getElementById("btnExit").innerText=texts[lang].btnExit;
+}
+
+// اختيار اللغة
+document.getElementById("btnAR").onclick=()=>setLanguage("ar");
+document.getElementById("btnEN").onclick=()=>setLanguage("en");
+document.getElementById("btnChangeLang").onclick=()=>langSelect.classList.toggle("hidden");
+
+// إضافة طبخة
+document.getElementById("btnAdd").onclick=()=>{ mainMenu.classList.add("hidden"); addForm.classList.remove("hidden"); };
+document.getElementById("cancelAdd").onclick=showMenu;
+const saveNewRecipe=()=>{
+    const name=document.getElementById("recipeName").value.trim();
+    const category=document.getElementById("recipeCategory").value;
+    const difficulty=document.getElementById("recipeDifficulty").value;
+    const details=document.getElementById("recipeDetails").value.trim();
+    if(!name || !category || !difficulty){ alert(texts[lang].fillAll); return; }
+    const id=Date.now().toString();
+    recipes.push({id,name,category,difficulty,details});
+    saveRecipes();
+    alert(texts[lang].saved);
+    document.getElementById("recipeName").value=""; document.getElementById("recipeDetails").value="";
+    showMenu();
+}
+document.getElementById("saveRecipe").onclick=saveNewRecipe;
+
+// عرض الطبخات
+function renderList(){
+    listItems.innerHTML="";
+    recipes.forEach((r,i)=>{
+        listItems.innerHTML+=`<li>${i+1}. ${r.name}\n${r.category} – ${r.difficulty}\n${r.details}
+        <span>
+            <button class="editBtn" onclick="editRecipe('${r.id}')">✎</button>
+            <button class="delBtn" onclick="deleteRecipe('${r.id}')">×</button>
+        </span></li>`;
+    });
+    document.getElementById("listTitle").innerText=texts[lang].listTitle;
+    mainMenu.classList.add("hidden"); recipeList.classList.remove("hidden");
+}
+document.getElementById("btnShowAll").onclick=()=>{
+    if(recipes.length===0){ alert(texts[lang].noRecipes); return; }
+    renderList();
+}
+
+// حذف وتعديل
+function deleteRecipe(id){
+    if(confirm("تأكيد الحذف؟ / Confirm delete?")){
+        recipes=recipes.filter(r=>r.id!==id);
+        favorites=favorites.filter(f=>f!==id);
+        saveRecipes(); saveFavorites(); renderList();
+    }
+}
+function editRecipe(id){
+    const r=recipes.find(r=>r.id===id); if(!r) return;
+    document.getElementById("recipeName").value=r.name;
+    document.getElementById("recipeCategory").value=r.category;
+    document.getElementById("recipeDifficulty").value=r.difficulty;
+    document.getElementById("recipeDetails").value=r.details;
+    addForm.classList.remove("hidden"); recipeList.classList.add("hidden"); mainMenu.classList.add("hidden");
+    const saveBtn=document.getElementById("saveRecipe");
+    saveBtn.innerText=lang==="ar"?"حفظ التعديل":"Save Edit";
+    saveBtn.onclick=()=>{
+        r.name=document.getElementById("recipeName").value.trim();
+        r.category=document.getElementById("recipeCategory").value;
+        r.difficulty=document.getElementById("recipeDifficulty").value;
+        r.details=document.getElementById("recipeDetails").value.trim();
+        saveRecipes(); alert(texts[lang].saved);
+        document.getElementById("recipeName").value=""; document.getElementById("recipeDetails").value="";
+        saveBtn.innerText=lang==="ar"?"حفظ الطبخة":"Save Recipe";
+        saveBtn.onclick=saveNewRecipe;
+        showMenu();
+    };
+}
+
+// إغلاق القائمة
+document.getElementById("closeList").onclick=showMenu;
+
+// اقتراح طبخة
+document.getElementById("btnSuggest").onclick=()=>{
+    const available=recipes.filter(r=>!favorites.includes(r.id));
+    if(available.length===0){ alert(texts[lang].noFavs); return; }
+    let sel; do{ sel=available[Math.floor(Math.random()*available.length)]; }while(sel.id===lastSuggestedId && available.length>1);
+    lastSuggestedId=sel.id;
+    suggestText.innerText=`${sel.name}\n${sel.category}\n${sel.difficulty}\n${sel.details}`;
+    suggestForm.dataset.id=sel.id;
+    mainMenu.classList.add("hidden"); suggestForm.classList.remove("hidden");
+};
+document.getElementById("another").onclick=document.getElementById("btnSuggest").onclick;
+document.getElementById("backSuggest").onclick=showMenu;
+document.getElementById("cookIt").onclick=()=>{
+    const id=suggestForm.dataset.id;
+    if(!favorites.includes(id)) favorites.push(id);
+    if(favorites.length>15) favorites.shift();
+    saveFavorites();
+    alert(texts[lang].addedFav);
+    showMenu();
+}
+
+// طبخاتي السابقة
+document.getElementById("btnFav").onclick=()=>{
+    if(favorites.length===0){ alert(texts[lang].noFavs); return; }
+    listItems.innerHTML="";
+    favorites.forEach((f,i)=>{
+        const r=recipes.find(r=>r.id===f);
+        if(r) listItems.innerHTML+=`<li>${i+1}. ${r.name}\n${r.category} – ${r.difficulty}\n${r.details}</li>`;
+    });
+    document.getElementById("listTitle").innerText=texts[lang].favTitle;
+    mainMenu.classList.add("hidden"); recipeList.classList.remove("hidden");
+}
+
+// عن التطبيق
+document.getElementById("btnHelp").onclick=()=>{ alert(texts[lang].helpMsg); }
+
+// خروج
+document.getElementById("btnExit").onclick=()=>{ window.close(); }
+
+</script>
+</body>
+</html>
